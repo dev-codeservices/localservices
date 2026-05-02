@@ -1,0 +1,26 @@
+# Changelog
+
+Todas as mudanças notáveis neste projeto serão documentadas aqui.
+
+O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
+e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
+
+## [Unreleased]
+
+## [1.0.0] - 2026-05-01
+
+### Adicionado
+
+- PostgreSQL 15 com isolamento por schema
+- Redis 7 com autenticação por senha
+- MySQL 8 com isolamento por banco de dados
+- Temporal 1.24.2 com suporte a múltiplos namespaces
+- Temporal UI 2.30.3 na porta 8081
+- Scripts idempotentes de inicialização para PostgreSQL e MySQL
+- Script `setup-env.sh` para geração do `.env` raiz a partir de `envs/`
+- Arquivos `.env.example` como templates de configuração
+- Suporte a múltiplos serviços por banco via variáveis de ambiente
+- Rede Docker compartilhada `local-services-network` para integração entre projetos
+
+[Unreleased]: https://github.com/DevCodeServices/LocalServices/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/DevCodeServices/LocalServices/releases/tag/v1.0.0

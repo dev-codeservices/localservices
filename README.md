@@ -103,6 +103,22 @@ Múltiplos serviços: separados por `;`
 
 **Redis** — senha única compartilhada (sem isolamento por usuário).
 
+## Contribuindo
+
+Veja [CONTRIBUTING.md](CONTRIBUTING.md) para diretrizes de contribuição.
+
+## Segurança
+
+Leia [SECURITY.md](SECURITY.md) antes de reportar vulnerabilidades.
+
+## Changelog
+
+Veja [CHANGELOG.md](CHANGELOG.md) para o histórico de mudanças.
+
+## Licença
+
+[MIT](LICENSE)
+
 ## Conectando uma aplicação
 
 ```env
