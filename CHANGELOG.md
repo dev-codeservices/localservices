@@ -5,7 +5,17 @@ Todas as mudanças notáveis neste projeto serão documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
-## [Unreleased]
+## [1.0.1] - 2026-05-01
+
+### Alterado
+
+- PostgreSQL: isolamento migrado de schema (banco único `localservices`) para banco de dados separado por serviço — alinha com o modelo já adotado pelo MySQL
+- `PG_APP_SERVICES`: terceiro campo renomeado de `schema` para `database`; semântica mantida (padrão = nome do usuário quando omitido)
+- Removida a variável `PG_APP_DB` do `docker-compose.yml` e dos arquivos de env
+
+### Removido
+
+- Schema `public` compartilhado implícito — cada serviço passa a ter seu próprio banco isolado
 
 ## [1.0.0] - 2026-05-01
 
@@ -22,5 +32,6 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 - Suporte a múltiplos serviços por banco via variáveis de ambiente
 - Rede Docker compartilhada `local-services-network` para integração entre projetos
 
-[Unreleased]: https://github.com/DevCodeServices/LocalServices/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/DevCodeServices/LocalServices/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/DevCodeServices/LocalServices/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/DevCodeServices/LocalServices/releases/tag/v1.0.0

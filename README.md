@@ -33,7 +33,7 @@ Cada serviço tem seu próprio arquivo em `envs/`. Edite apenas o que precisar:
 
 | Arquivo                  | O que configura              |
 |--------------------------|------------------------------|
-| `envs/postgresql.env`    | Admin, schemas, serviços     |
+| `envs/postgresql.env`    | Admin, bancos, serviços      |
 | `envs/redis.env`         | Senha                        |
 | `envs/temporal.env`      | Namespaces, retenção         |
 | `envs/mysql.env`         | Admin, bancos, serviços      |
@@ -45,11 +45,11 @@ Após qualquer edição, regenere o `.env` raiz:
 
 ## Adicionando um novo serviço
 
-### PostgreSQL (schema isolado)
+### PostgreSQL (banco isolado)
 
 Edite `envs/postgresql.env` e adicione ao `PG_APP_SERVICES`:
 ```
-PG_APP_SERVICES=appexistente||senha||schema;novoapp||senha||novoschema
+PG_APP_SERVICES=appexistente||senha||banco;novoapp||senha||novobanco
 ```
 Aplique sem reiniciar o container:
 ```bash
@@ -84,20 +84,20 @@ docker compose restart temporal-init
 ## Formato de serviços
 
 ```
-user||password||schema_ou_database
+user||password||database
 ```
 
 | Campo    | Separador | Obrigatório |
 |----------|-----------|-------------|
 | user     | `\|\|`    | sim         |
 | password | `\|\|`    | sim         |
-| schema/db| —         | não (padrão: nome do usuário) |
+| database | —         | não (padrão: nome do usuário) |
 
 Múltiplos serviços: separados por `;`
 
 ## Isolamento
 
-**PostgreSQL** — banco único (`localservices`), schema separado por serviço. Cada usuário enxerga apenas o seu schema via `search_path`.
+**PostgreSQL** — banco separado por serviço. Cada usuário é dono do seu banco e não tem acesso aos demais.
 
 **MySQL** — banco separado por serviço. Cada usuário tem `GRANT` apenas no seu banco.
 
@@ -123,7 +123,7 @@ Veja [CHANGELOG.md](CHANGELOG.md) para o histórico de mudanças.
 
 ```env
 # PostgreSQL
-DATABASE_URL=postgresql://<user>:<password>@localhost:5432/localservices
+DATABASE_URL=postgresql://<user>:<password>@localhost:5432/<database>
 
 # Redis
 REDIS_HOST=localhost

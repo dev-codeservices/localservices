@@ -11,7 +11,7 @@ name: local-services
 #   ./scripts/setup-env.sh   # gera o .env raiz a partir dos envs/*.env
 #
 # Para adicionar um novo serviço:
-#   PostgreSQL : edite PG_APP_SERVICES em envs/postgresql.env
+#   PostgreSQL : edite PG_APP_SERVICES em envs/postgresql.env (user||password||database)
 #                → docker compose exec postgresql /scripts/pg-setup.sh
 #   MySQL      : edite MYSQL_APP_SERVICES em envs/mysql.env
 #                → docker compose exec mysql /scripts/mysql-setup.sh
@@ -23,7 +23,7 @@ services:
 
   # ── PostgreSQL ───────────────────────────────────────────────────────────────
   # Superusuário admin: PG_ADMIN_USER.
-  # Cada serviço recebe usuário e schema próprios via PG_APP_SERVICES.
+  # Cada serviço recebe usuário e banco de dados próprios via PG_APP_SERVICES.
   postgresql:
     image: postgres:15-alpine
     container_name: localservices-postgresql
@@ -31,10 +31,9 @@ services:
       POSTGRES_USER: ${PG_ADMIN_USER:-localservices_admin}
       POSTGRES_PASSWORD: ${PG_ADMIN_PASSWORD:-localservices_admin}
       POSTGRES_DB: postgres
-      PG_APP_DB: ${PG_APP_DB:-localservices}
       PG_TEMPORAL_USER: ${PG_TEMPORAL_USER:-temporal}
       PG_TEMPORAL_PASSWORD: ${PG_TEMPORAL_PASSWORD:-temporal}
-      # Formato: user||password||schema  (múltiplos separados por ;)
+      # Formato: user||password||database  (múltiplos separados por ;)
       PG_APP_SERVICES: ${PG_APP_SERVICES:-}
     ports:
       - "5432:5432"

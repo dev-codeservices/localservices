@@ -15,7 +15,7 @@ Use o formato [Conventional Commits](https://www.conventionalcommits.org/pt-br/)
 
 ```
 feat: adiciona suporte ao MongoDB
-fix: corrige criação de schema no PostgreSQL quando nome tem hífen
+fix: corrige criação de banco no PostgreSQL quando nome tem hífen
 docs: atualiza exemplos de conexão no README
 chore: atualiza versão do Temporal para 1.25.0
 ```

@@ -1,13 +1,12 @@
 #!/bin/bash
-# Cria/atualiza usuários e schemas no PostgreSQL.
+# Cria/atualiza usuários e bancos de dados no PostgreSQL.
 # Idempotente: seguro rodar múltiplas vezes.
 #
 # Variáveis de ambiente (definidas via docker-compose / .env):
 #   POSTGRES_USER        → superusuário admin (injetado pelo container)
-#   PG_APP_DB            → banco compartilhado de aplicações
 #   PG_TEMPORAL_USER     → usuário do Temporal (precisa de CREATEDB)
 #   PG_TEMPORAL_PASSWORD → senha do Temporal
-#   PG_APP_SERVICES      → serviços no formato: user||password||schema
+#   PG_APP_SERVICES      → serviços no formato: user||password||database
 #                          Múltiplos serviços separados por ;
 #
 # Para adicionar um novo serviço:
@@ -41,18 +40,7 @@ ensure_user() {
     fi
 }
 
-# ── Banco compartilhado ────────────────────────────────────────────────────────
-echo "==> Banco compartilhado: '$PG_APP_DB'"
-exists=$(psql -tAc "SELECT 1 FROM pg_database WHERE datname = '$PG_APP_DB'" \
-    -U "$POSTGRES_USER" -d "$POSTGRES_DB")
-if [ -z "$exists" ]; then
-    sql "$POSTGRES_DB" "CREATE DATABASE \"$PG_APP_DB\";"
-    echo "    + Criado."
-fi
-sql "$POSTGRES_DB" "REVOKE ALL ON DATABASE \"$PG_APP_DB\" FROM PUBLIC;"
-
 # ── Temporal ───────────────────────────────────────────────────────────────────
-echo ""
 echo "==> Temporal: '$PG_TEMPORAL_USER'"
 # CREATEDB obrigatório: o auto-setup cria 'temporal_visibility' e roda as migrations
 ensure_user "$PG_TEMPORAL_USER" "$PG_TEMPORAL_PASSWORD" "CREATEDB"
@@ -67,8 +55,8 @@ if [ -z "$exists" ]; then
 fi
 
 # ── Serviços de aplicação ──────────────────────────────────────────────────────
-# Formato: user||password||schema  (múltiplos separados por ;)
-# O schema é opcional — se omitido, usa o nome do usuário.
+# Formato: user||password||database  (múltiplos separados por ;)
+# O database é opcional — se omitido, usa o nome do usuário.
 echo ""
 echo "==> Serviços de aplicação (PG_APP_SERVICES)..."
 
@@ -78,19 +66,24 @@ for svc in "${SERVICES[@]}"; do
 
     user=$(field "$svc" 1)
     pass=$(field "$svc" 2)
-    schema=$(field "$svc" 3)
-    schema="${schema:-$user}"
+    db=$(field "$svc" 3)
+    db="${db:-$user}"
     [ -z "$user" ] && continue
 
     echo ""
-    echo "  user='$user'  schema='$schema'"
+    echo "  user='$user'  database='$db'"
     ensure_user "$user" "$pass"
-    sql "$POSTGRES_DB" "GRANT CONNECT ON DATABASE \"$PG_APP_DB\" TO \"$user\";"
-    sql "$PG_APP_DB"   "CREATE SCHEMA IF NOT EXISTS \"$schema\" AUTHORIZATION \"$user\";"
-    sql "$PG_APP_DB"   "REVOKE ALL ON SCHEMA \"$schema\" FROM PUBLIC;"
-    # search_path restrito ao schema do serviço — evita acesso acidental a outros schemas
-    sql "$POSTGRES_DB" \
-        "ALTER ROLE \"$user\" IN DATABASE \"$PG_APP_DB\" SET search_path = \"$schema\";"
+
+    exists=$(psql -tAc "SELECT 1 FROM pg_database WHERE datname = '$db'" \
+        -U "$POSTGRES_USER" -d "$POSTGRES_DB")
+    if [ -z "$exists" ]; then
+        sql "$POSTGRES_DB" "CREATE DATABASE \"$db\" OWNER \"$user\";"
+        echo "    + Banco criado: $db"
+    else
+        sql "$POSTGRES_DB" "ALTER DATABASE \"$db\" OWNER TO \"$user\";"
+        echo "    ~ Banco existe: $db"
+    fi
+    sql "$POSTGRES_DB" "REVOKE ALL ON DATABASE \"$db\" FROM PUBLIC;"
 done
 
 echo ""
