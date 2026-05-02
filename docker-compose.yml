@@ -1,0 +1,162 @@
+name: local-services
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Infraestrutura local compartilhada — PostgreSQL, Redis, Temporal, MySQL.
+#
+# Como usar:
+#   docker compose up -d                   # sobe toda a infra
+#   docker compose up -d postgresql redis  # sobe serviços específicos
+#
+# Configuração via envs/:
+#   ./scripts/setup-env.sh   # gera o .env raiz a partir dos envs/*.env
+#
+# Para adicionar um novo serviço:
+#   PostgreSQL : edite PG_APP_SERVICES em envs/postgresql.env
+#                → docker compose exec postgresql /scripts/pg-setup.sh
+#   MySQL      : edite MYSQL_APP_SERVICES em envs/mysql.env
+#                → docker compose exec mysql /scripts/mysql-setup.sh
+#   Namespace  : edite TEMPORAL_NAMESPACES em envs/temporal.env
+#                → docker compose restart temporal-init
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL ───────────────────────────────────────────────────────────────
+  # Superusuário admin: PG_ADMIN_USER.
+  # Cada serviço recebe usuário e schema próprios via PG_APP_SERVICES.
+  postgresql:
+    image: postgres:15-alpine
+    container_name: localservices-postgresql
+    environment:
+      POSTGRES_USER: ${PG_ADMIN_USER:-localservices_admin}
+      POSTGRES_PASSWORD: ${PG_ADMIN_PASSWORD:-localservices_admin}
+      POSTGRES_DB: postgres
+      PG_APP_DB: ${PG_APP_DB:-localservices}
+      PG_TEMPORAL_USER: ${PG_TEMPORAL_USER:-temporal}
+      PG_TEMPORAL_PASSWORD: ${PG_TEMPORAL_PASSWORD:-temporal}
+      # Formato: user||password||schema  (múltiplos separados por ;)
+      PG_APP_SERVICES: ${PG_APP_SERVICES:-}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+      - ./init-pg:/docker-entrypoint-initdb.d:ro
+      - ./scripts:/scripts:ro
+    networks:
+      - local-network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${PG_ADMIN_USER:-localservices_admin}", "-d", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Redis ────────────────────────────────────────────────────────────────────
+  # Autenticação por senha única (Redis não tem isolamento por usuário/schema).
+  redis:
+    image: redis:7-alpine
+    container_name: localservices-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_local}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - local-network
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a '${REDIS_PASSWORD:-redis_local}' ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Temporal Server ──────────────────────────────────────────────────────────
+  temporal:
+    image: temporalio/auto-setup:1.24.2
+    container_name: localservices-temporal
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=${PG_TEMPORAL_USER:-temporal}
+      - POSTGRES_PWD=${PG_TEMPORAL_PASSWORD:-temporal}
+      - POSTGRES_SEEDS=postgresql
+    ports:
+      - "7233:7233"
+    networks:
+      - local-network
+    restart: unless-stopped
+
+  # ── Namespaces Temporal ───────────────────────────────────────────────────────
+  # Para adicionar: edite TEMPORAL_NAMESPACES em envs/temporal.env e rode:
+  #   docker compose restart temporal-init
+  temporal-init:
+    image: temporalio/auto-setup:1.24.2
+    container_name: localservices-temporal-init
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+      # Formato: namespace1,namespace2  (vírgula como separador)
+      - TEMPORAL_NAMESPACES=${TEMPORAL_NAMESPACES:-default}
+      - TEMPORAL_RETENTION=${TEMPORAL_RETENTION:-72h}
+    volumes:
+      - ./scripts/temporal-init.sh:/temporal-init.sh:ro
+    entrypoint: ["/bin/sh", "/temporal-init.sh"]
+    networks:
+      - local-network
+    restart: on-failure
+
+  # ── Temporal UI ──────────────────────────────────────────────────────────────
+  temporal-ui:
+    image: temporalio/ui:2.30.3
+    container_name: localservices-temporal-ui
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:8081
+    ports:
+      - "8081:8080"
+    networks:
+      - local-network
+    restart: unless-stopped
+
+  # ── MySQL ────────────────────────────────────────────────────────────────────
+  # Superusuário root: MYSQL_ROOT_PASSWORD.
+  # Cada serviço recebe usuário e banco próprios via MYSQL_APP_SERVICES.
+  mysql:
+    image: mysql:8.0
+    container_name: localservices-mysql
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mysql_root_local}
+      # Formato: user||password||database  (múltiplos separados por ;)
+      MYSQL_APP_SERVICES: ${MYSQL_APP_SERVICES:-}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-mysql:/docker-entrypoint-initdb.d:ro
+      - ./scripts:/scripts:ro
+    networks:
+      - local-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-mysql_root_local}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+networks:
+  local-network:
+    name: local-services-network
+    driver: bridge
+
+volumes:
+  postgresql_data:
+  redis_data:
+  mysql_data:

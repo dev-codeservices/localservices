@@ -1,0 +1,4 @@
+# Env files reais (nunca commitar — use os .example)
+.env
+envs/*.env
+!envs/*.env.example
