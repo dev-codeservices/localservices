@@ -84,6 +84,15 @@ for svc in "${SERVICES[@]}"; do
         echo "    ~ Banco existe: $db"
     fi
     sql "$POSTGRES_DB" "REVOKE ALL ON DATABASE \"$db\" FROM PUBLIC;"
+
+    # Garante acesso ao app user sobre objetos existentes e futuros no schema public.
+    # Necessário quando o admin (POSTGRES_USER) cria tabelas diretamente (ex: via DBVear).
+    sql "$db" "GRANT USAGE ON SCHEMA public TO \"$user\";"
+    sql "$db" "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"$user\";"
+    sql "$db" "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \"$user\";"
+    sql "$db" "ALTER DEFAULT PRIVILEGES FOR ROLE \"$POSTGRES_USER\" IN SCHEMA public GRANT ALL ON TABLES TO \"$user\";"
+    sql "$db" "ALTER DEFAULT PRIVILEGES FOR ROLE \"$POSTGRES_USER\" IN SCHEMA public GRANT ALL ON SEQUENCES TO \"$user\";"
+    echo "    + Grants garantidos para: $user em $db"
 done
 
 echo ""

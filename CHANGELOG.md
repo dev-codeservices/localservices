@@ -5,6 +5,13 @@ Todas as mudanças notáveis neste projeto serão documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.0.2] - 2026-05-01
+
+### Corrigido
+
+- PostgreSQL: tabelas criadas pelo usuário admin (ex: via DBVear) agora ficam acessíveis ao app user do serviço — adicionados `GRANT ALL PRIVILEGES ON ALL TABLES/SEQUENCES` e `ALTER DEFAULT PRIVILEGES` no `pg-setup.sh`
+- `ALTER DEFAULT PRIVILEGES FOR ROLE <admin>` garante que objetos criados pelo admin no futuro também sejam automaticamente acessíveis ao app user, sem necessidade de re-execução manual do script
+
 ## [1.0.1] - 2026-05-01
 
 ### Alterado
@@ -32,6 +39,6 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 - Suporte a múltiplos serviços por banco via variáveis de ambiente
 - Rede Docker compartilhada `local-services-network` para integração entre projetos
 
-[Unreleased]: https://github.com/DevCodeServices/LocalServices/compare/v1.0.1...HEAD
+[1.0.2]: https://github.com/DevCodeServices/LocalServices/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/DevCodeServices/LocalServices/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/DevCodeServices/LocalServices/releases/tag/v1.0.0
